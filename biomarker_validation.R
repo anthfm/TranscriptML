@@ -165,7 +165,7 @@ c_indices <- structure(
 
 c_tabletext <- cbind(
   c("PSet", "gCSI", "CCLE", "GDSC2","Meta analysis"),
-  c("N", 48, 48, 48, 48), #common samples for each dataset
+  c("N", 48, 48, 48, 144), #common samples for each dataset
   c("C-index", formatC(gcsi_ci, format = "e", digits = 2), formatC(ccle_ci, format = "e", digits = 2),formatC(gdsc_ci, format = "e", digits = 2) ,formatC(combined_ci$estimate, format = "e", digits = 2)),
   c("P-value", formatC(gcsi_pvalue, format = "e", digits = 2), formatC(ccle_pvalue, format = "e", digits = 2), formatC(gdsc_pvalue, format = "e", digits = 2),formatC(combined_ci_p, format = "e", digits = 2))
 )
