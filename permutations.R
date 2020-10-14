@@ -251,6 +251,8 @@ computePerBiomarker <- function(biomarker_matrix, mData, cells) {
 
 load("gene_compute_permutation.RData")
 
+biomarkers_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] <- ifelse(biomarkers_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] == 0 | is.na(biomarkers_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")]), "NO", "YES")
+
 ##############
 ###Isoforms###
 ##############
@@ -261,8 +263,9 @@ load("gene_compute_permutation.RData")
 #save(erbb2_perm_inter, phb_perm_inter, alk_perm_inter, file = "biomarker_compute_permutation_iso.RData")
 
 load("biomarker_compute_permutation_iso.RData")
-
-
+erbb2_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] <- ifelse(erbb2_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] == 0 | is.na(erbb2_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")]), "NO", "YES")
+alk_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] <- ifelse(alk_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] == 0 | is.na(alk_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")]), "NO", "YES")
+phb_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] <- ifelse(phb_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] == 0 | is.na(phb_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")]), "NO", "YES")
 
 #############################
 ######Forest_Plot (Gene)#####
@@ -297,12 +300,12 @@ for (i in 1:length(genes)){
     c("C-index", formatC(gene_CI$gCSI_CI, format = "e", digits = 2), formatC(gene_CI$CCLE_CI, format = "e", digits = 2),formatC(gene_CI$GDSC_CI, format = "e", digits = 2)),
     c("P-value \n(permutation)", formatC(gene_perm$gCSI_pvalue, format = "e", digits = 2), formatC(gene_perm$CCLE_pvalue, format = "e", digits = 2), formatC(gene_perm$GDSC_pvalue, format = "e", digits = 2)),
     c("Pearson \n(permutation)", formatC(gene_perm$gCSI_pearson, format = "e", digits = 2),formatC(gene_perm$CCLE_pearson, format = "e", digits = 2), formatC(gene_perm$GDSC_pearson, format = "e", digits = 2)),
-    c("Significant \n(permutation)", formatC(gene_perm$gCSI_sig),formatC(gene_perm$CCLE_sig), formatC(gene_perm$GDSC_sig))
+    c("Significant \n(permutation)", gene_perm$gCSI_sig, gene_perm$CCLE_sig, gene_perm$GDSC_sig)
     
   )
   
   
-  fileName = paste("figures/",gene,"_",drug,".pdf")
+  fileName = paste0("figures/",gene,"_",drug,".pdf")
   pdf(fileName, width=9, height=3, onefile=FALSE)
   
   forestplot(c_tabletext, c_indices, new_page = TRUE, boxsize = 0.3, is.summary=c(T,F,F,F), xlab="Concordance Index", 
