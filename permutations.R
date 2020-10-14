@@ -263,9 +263,68 @@ load("gene_compute_permutation.RData")
 load("biomarker_compute_permutation_iso.RData")
 
 
-######################
-#####Forest_Plot######
-######################
+
+#############################
+######Forest_Plot (Gene)#####
+#############################
+
+genes <- c("PHB", "ALK","ERBB2")
+drugs <- c("Paclitaxel", "Crizotinib", "Lapatinib")
+
+for (i in 1:length(genes)){
+  gene <- genes[i]
+  drug <- drugs[i]
+  
+  gene_CI <- biomarkers_CI_inter[which(biomarkers_CI_inter$gene == gene & biomarkers_CI_inter$drug == drug),]
+  gene_perm <- biomarkers_perm_inter[which(biomarkers_perm_inter$gene == gene & biomarkers_perm_inter$drug == drug),]
+  
+  
+  c_indices <- structure(
+    list(
+      mean  = c(NA, gene_CI$gCSI_CI, gene_CI$CCLE_CI, gene_CI$GDSC_CI),
+      lower = c(NA, gene_CI$gCSI_lower, gene_CI$CCLE_lower, gene_CI$GDSC_lower),
+      upper = c(NA, gene_CI$gCSI_upper, gene_CI$CCLE_upper, gene_CI$GDSC_upper)
+    ),
+    .Names = c("C-index    ", "lower", "upper"),
+    row.names = c(NA, -4L), 
+    class = "data.frame"
+  )
+  
+  
+  c_tabletext <- cbind(
+    c("PSet", "gCSI", "CCLE", "GDSC2"),
+    c("N", 48, 48, 48), #common samples for each dataset
+    c("C-index", formatC(gene_CI$gCSI_CI, format = "e", digits = 2), formatC(gene_CI$CCLE_CI, format = "e", digits = 2),formatC(gene_CI$GDSC_CI, format = "e", digits = 2)),
+    c("P-value \n(permutation)", formatC(gene_perm$gCSI_pvalue, format = "e", digits = 2), formatC(gene_perm$CCLE_pvalue, format = "e", digits = 2), formatC(gene_perm$GDSC_pvalue, format = "e", digits = 2)),
+    c("Pearson \n(permutation)", formatC(gene_perm$gCSI_pearson, format = "e", digits = 2),formatC(gene_perm$CCLE_pearson, format = "e", digits = 2), formatC(gene_perm$GDSC_pearson, format = "e", digits = 2)),
+    c("Significant \n(permutation)", formatC(gene_perm$gCSI_sig),formatC(gene_perm$CCLE_sig), formatC(gene_perm$GDSC_sig))
+    
+  )
+  
+  
+  fileName = paste("figures/",gene,"_",drug,".pdf")
+  pdf(fileName, width=9, height=3, onefile=FALSE)
+  
+  forestplot(c_tabletext, c_indices, new_page = TRUE, boxsize = 0.3, is.summary=c(T,F,F,F), xlab="Concordance Index", 
+             title="", zero=c(.49, .51),hrzl_lines=list("2"=gpar(lty=2, columns=1:6, col = "#000044")),
+             txt_gp=fpTxtGp(label=gpar(fontfamily = "", cex = 0.8, fontface=2),
+                            ticks=gpar(fontfamily = "", cex=.5, fontface=1),
+                            xlab=gpar(fontfamily = "", cex=0.8, fontface=2),
+                            legend=gpar(fontfamily = "", cex = 1, fontface=1)),
+             col=fpColors(box=RColorBrewer::brewer.pal(n=4, name="Set2"),
+                          line=RColorBrewer::brewer.pal(n=4, name="Set2"),
+                          summary="blue"),
+             xticks= c(.4, .5, .6, .7, .8)
+  )
+  
+  dev.off()
+  
+}
+
+
+
+
+
 
 
 
