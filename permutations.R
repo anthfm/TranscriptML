@@ -183,7 +183,12 @@ colnames(alk_isoforms) <- c("gene","compound")
 #phb_isoforms_CI_all <- computeCIBiomarker(biomarker_matrix = phb_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = "all")
 #alk_isoforms_CI_all <- computeCIBiomarker(biomarker_matrix = alk_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = "all")
 
-save(erbb2_isoforms_CI, phb_isoforms_CI, alk_isoforms_CI, erbb2_isoforms_CI_all, phb_isoforms_CI_all, alk_isoforms_CI_all, file="isoforms_compute_CI.RData")
+#erbb2_isoforms_CI$gene_name <- "ERBB2"
+#phb_isoforms_CI$gene_name <- "PHB"
+#alk_isoforms_CI$gene_name <- "ALK"
+
+#isoform_CI <- rbind(erbb2_isoforms_CI, phb_isoforms_CI, alk_isoforms_CI)
+#save(erbb2_isoforms_CI, phb_isoforms_CI, alk_isoforms_CI, erbb2_isoforms_CI_all, phb_isoforms_CI_all, alk_isoforms_CI_all, isoform_CI, file="isoforms_compute_CI.RData")
 
 load("isoforms_compute_CI.RData")
 
@@ -281,12 +286,19 @@ biomarkers_perm_inter_all[,c("gCSI_sig","CCLE_sig","GDSC_sig")] <- ifelse(biomar
 #erbb2_perm_inter <- computePerBiomarker(biomarker_matrix = erbb2_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
 #phb_perm_inter <- computePerBiomarker(biomarker_matrix = phb_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
 #alk_perm_inter <- computePerBiomarker(biomarker_matrix = alk_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
+
+#erbb2_perm_inter$gene_name <- "ERBB2"
+#phb_perm_inter$gene_name <- "PHB"
+#alk_perm_inter$gene_name <- "ALK"
+
 #save(erbb2_perm_inter, phb_perm_inter, alk_perm_inter, file = "biomarker_compute_permutation_iso.RData")
 
 load("biomarker_compute_permutation_iso.RData")
 erbb2_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] <- ifelse(erbb2_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] == 0 | is.na(erbb2_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")]), "NO", "YES")
 alk_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] <- ifelse(alk_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] == 0 | is.na(alk_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")]), "NO", "YES")
 phb_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] <- ifelse(phb_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")] == 0 | is.na(phb_perm_inter[,c("gCSI_sig","CCLE_sig","GDSC_sig")]), "NO", "YES")
+
+isoform_perm <- rbind(erbb2_perm_inter, alk_perm_inter, phb_perm_inter)
 
 #############################
 ######Forest_Plot (Gene)#####
@@ -302,42 +314,90 @@ for (i in 1:length(genes)){
   gene_CI <- biomarkers_CI_inter[which(biomarkers_CI_inter$gene == gene & biomarkers_CI_inter$drug == drug),]
   gene_perm <- biomarkers_perm_inter[which(biomarkers_perm_inter$gene == gene & biomarkers_perm_inter$drug == drug),]
   
+  transcript_CI <- isoform_CI[which(isoform_CI$gene_name == gene & isoform_CI$drug == drug),]  
+  transcript_perm <- isoform_perm[which(isoform_perm$gene_name == gene & isoform_perm$drug == drug),]  
+  rows_l <- length(c(NA, gene_CI$gCSI_CI,
+                   c(transcript_CI$gCSI_CI),
+                   gene_CI$CCLE_CI,
+                   c(transcript_CI$CCLE_CI),
+                   gene_CI$GDSC_CI,
+                   c(transcript_CI$GDSC_CI)))
   
   c_indices <- structure(
     list(
-      mean  = c(NA, gene_CI$gCSI_CI, gene_CI$CCLE_CI, gene_CI$GDSC_CI),
-      lower = c(NA, gene_CI$gCSI_lower, gene_CI$CCLE_lower, gene_CI$GDSC_lower),
-      upper = c(NA, gene_CI$gCSI_upper, gene_CI$CCLE_upper, gene_CI$GDSC_upper)
+      mean  = c(NA, gene_CI$gCSI_CI,
+                c(transcript_CI$gCSI_CI),
+                gene_CI$CCLE_CI,
+                c(transcript_CI$CCLE_CI),
+                gene_CI$GDSC_CI,
+                c(transcript_CI$GDSC_CI)),
+      
+      lower = c(NA, gene_CI$gCSI_lower,
+                c(transcript_CI$gCSI_lower),
+                gene_CI$CCLE_lower,
+                c(transcript_CI$CCLE_lower),
+                gene_CI$GDSC_lower,
+                c(transcript_CI$GDSC_lower)),
+      
+      upper = c(NA, gene_CI$gCSI_upper,
+                c(transcript_CI$gCSI_upper),
+                gene_CI$CCLE_upper,
+                c(transcript_CI$CCLE_upper),
+                gene_CI$GDSC_upper,
+                c(transcript_CI$GDSC_upper))
     ),
     .Names = c("C-index    ", "lower", "upper"),
-    row.names = c(NA, -4L), 
+    row.names = c(NA, -rows_l), 
     class = "data.frame"
   )
   
   
   c_tabletext <- cbind(
-    c("PSet", "gCSI", "CCLE", "GDSC2"),
-    c("N", 48, 48, 48), #common samples for each dataset
-    c("C-index", formatC(gene_CI$gCSI_CI, format = "e", digits = 2), formatC(gene_CI$CCLE_CI, format = "e", digits = 2),formatC(gene_CI$GDSC_CI, format = "e", digits = 2)),
-    c("P-value \n(permutation)", formatC(gene_perm$gCSI_pvalue, format = "e", digits = 2), formatC(gene_perm$CCLE_pvalue, format = "e", digits = 2), formatC(gene_perm$GDSC_pvalue, format = "e", digits = 2)),
-    c("Pearson \n(permutation)", formatC(gene_perm$gCSI_pearson, format = "e", digits = 2),formatC(gene_perm$CCLE_pearson, format = "e", digits = 2), formatC(gene_perm$GDSC_pearson, format = "e", digits = 2)),
-    c("Significant \n(permutation)", gene_perm$gCSI_sig, gene_perm$CCLE_sig, gene_perm$GDSC_sig)
+    c("PSet", "gCSI(gene)", c(transcript_CI$gene), "CCLE(gene)", c(transcript_CI$gene), "GDSC2(gene)", c(transcript_CI$gene)),
+    
+    c("C-index", formatC(gene_CI$gCSI_CI, format = "e", digits = 2),
+                 formatC(c(transcript_CI$gCSI_CI), format = "e", digits = 2),
+                 formatC(gene_CI$CCLE_CI, format = "e", digits = 2),
+                 formatC(c(transcript_CI$CCLE_CI), format = "e", digits = 2),
+                 formatC(gene_CI$GDSC_CI, format = "e", digits = 2),
+                 formatC(c(transcript_CI$GDSC_CI), format = "e", digits = 2)),
+    
+    c("P-value \n(permutation)", formatC(gene_perm$gCSI_pvalue, format = "e", digits = 2),
+                                 formatC(transcript_perm$gCSI_pvalue, format = "e", digits = 2),
+                                 formatC(gene_perm$CCLE_pvalue, format = "e", digits = 2),
+                                 formatC(transcript_perm$CCLE_pvalue, format = "e", digits = 2),
+                                 formatC(gene_perm$GDSC_pvalue, format = "e", digits = 2),
+                                 formatC(transcript_perm$GDSC_pvalue, format = "e", digits = 2)),
+    
+    c("Pearson \n(permutation)", formatC(gene_perm$gCSI_pearson, format = "e", digits = 2),
+                                 formatC(transcript_perm$gCSI_pearson, format = "e", digits = 2),
+                                 formatC(gene_perm$CCLE_pearson, format = "e", digits = 2),
+                                 formatC(transcript_perm$CCLE_pearson, format = "e", digits = 2),
+                                 formatC(gene_perm$GDSC_pearson, format = "e", digits = 2),
+                                 formatC(transcript_perm$GDSC_pearson, format = "e", digits = 2)),
+    
+    c("Significant \n(permutation)", gene_perm$gCSI_sig,
+                                     transcript_perm$gCSI_sig,
+                                     gene_perm$CCLE_sig,
+                                     transcript_perm$CCLE_sig,
+                                     gene_perm$GDSC_sig,
+                                     transcript_perm$GDSC_sig)
     
   )
   
   
   fileName = paste0("figures/",gene,"_",drug,".pdf")
-  pdf(fileName, width=9 , height=3, onefile=FALSE)
+  pdf(fileName, width=9 , height=12, onefile=FALSE)
   
-  forestplot(c_tabletext, c_indices, new_page = TRUE, boxsize = 0.3, is.summary=c(T,F,F,F), xlab="Concordance Index", 
-             title=paste0(gene,"_",drug), zero=c(.49, .51),hrzl_lines=list("2"=gpar(lty=2, columns=1:6, col = "#000044")),
+  forestplot(c_tabletext, c_indices, new_page = TRUE, boxsize = 0.3, is.summary=c(T,rep(F,rows_l)), xlab="Concordance Index", 
+             title=paste0(gene,"_",drug), zero=c(.49, .51),hrzl_lines=list("2"=gpar(lty=2, columns=1:5, col = "#000044")),
              txt_gp=fpTxtGp(label=gpar(fontfamily = "", cex = 0.8, fontface=2),
                             ticks=gpar(fontfamily = "", cex=.5, fontface=1),
                             xlab=gpar(fontfamily = "", cex=0.8, fontface=2),
                             legend=gpar(fontfamily = "", cex = 0.5, fontface=1)),
              col=fpColors(box=RColorBrewer::brewer.pal(n=4, name="Set2"),
                           line=RColorBrewer::brewer.pal(n=4, name="Set2"),
-                          summary="blue"),
+                          summary="blue"), 
              xticks= c(.3, .4, .5, .6, .7, .8)
   )
   
@@ -375,3 +435,7 @@ phb_perm_inter$mean_stability <- rowMeans(phb_perm_inter[,c(-1:-11)])
 alk_perm_inter$gcsi_ccle_stab <- transcript_stability$gcsi_ccle_spearman[match(alk_perm_inter$gene, transcript_stability$transcript_id)]
 alk_perm_inter$gdsc_ccle_stab <- transcript_stability$gdsc_ccle_spearman[match(alk_perm_inter$gene, transcript_stability$transcript_id)]
 alk_perm_inter$gcsi_gdsc_stab <- transcript_stability$gcsi_gdsc_spearman[match(alk_perm_inter$gene, transcript_stability$transcript_id)]
+
+
+
+
