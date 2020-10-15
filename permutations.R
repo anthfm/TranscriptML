@@ -183,14 +183,14 @@ colnames(alk_isoforms) <- c("gene","compound")
 #phb_isoforms_CI_all <- computeCIBiomarker(biomarker_matrix = phb_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = "all")
 #alk_isoforms_CI_all <- computeCIBiomarker(biomarker_matrix = alk_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = "all")
 
-#erbb2_isoforms_CI$gene_name <- "ERBB2"
-#phb_isoforms_CI$gene_name <- "PHB"
-#alk_isoforms_CI$gene_name <- "ALK"
-
 #isoform_CI <- rbind(erbb2_isoforms_CI, phb_isoforms_CI, alk_isoforms_CI)
 #save(erbb2_isoforms_CI, phb_isoforms_CI, alk_isoforms_CI, erbb2_isoforms_CI_all, phb_isoforms_CI_all, alk_isoforms_CI_all, isoform_CI, file="isoforms_compute_CI.RData")
 
 load("isoforms_compute_CI.RData")
+
+erbb2_isoforms_CI$gene_name <- "ERBB2"
+phb_isoforms_CI$gene_name <- "PHB"
+alk_isoforms_CI$gene_name <- "ALK"
 
 
 ######################
@@ -304,6 +304,22 @@ isoform_perm <- rbind(erbb2_perm_inter, alk_perm_inter, phb_perm_inter)
 ######Forest_Plot (Gene)#####
 #############################
 
+#add stabilities to gene + drug
+
+isoform_perm$gcsi_ccle_stab <- transcript_stability$gcsi_ccle_spearman[match(isoform_perm$gene, transcript_stability$transcript_id)]
+isoform_perm$gdsc_ccle_stab <- transcript_stability$gdsc_ccle_spearman[match(isoform_perm$gene, transcript_stability$transcript_id)]
+isoform_perm$gcsi_gdsc_stab <- transcript_stability$gcsi_gdsc_spearman[match(isoform_perm$gene, transcript_stability$transcript_id)]
+isoform_perm$mean_stability <- rowMeans(isoform_perm[,c(-1:-12)])
+
+
+isoform_CI$gcsi_ccle_stab <- transcript_stability$gcsi_ccle_spearman[match(isoform_CI$gene, transcript_stability$transcript_id)]
+isoform_CI$gdsc_ccle_stab <- transcript_stability$gdsc_ccle_spearman[match(isoform_CI$gene, transcript_stability$transcript_id)]
+isoform_CI$gcsi_gdsc_stab <- transcript_stability$gcsi_gdsc_spearman[match(isoform_CI$gene, transcript_stability$transcript_id)]
+isoform_CI$mean_stability <- rowMeans(isoform_CI[,c(-1:-18)])
+
+
+
+
 genes <- c("PHB", "ALK","ERBB2")
 drugs <- c("Paclitaxel", "Crizotinib", "Lapatinib")
 
@@ -315,7 +331,12 @@ for (i in 1:length(genes)){
   gene_perm <- biomarkers_perm_inter[which(biomarkers_perm_inter$gene == gene & biomarkers_perm_inter$drug == drug),]
   
   transcript_CI <- isoform_CI[which(isoform_CI$gene_name == gene & isoform_CI$drug == drug),]  
-  transcript_perm <- isoform_perm[which(isoform_perm$gene_name == gene & isoform_perm$drug == drug),]  
+  transcript_perm <- isoform_perm[which(isoform_perm$gene_name == gene & isoform_perm$drug == drug),]
+  
+  #order transcripts based on stability (mean stability)
+  transcript_CI <- transcript_CI[order(transcript_CI$mean_stability, decreasing = TRUE),] 
+  transcript_perm <- transcript_perm[order(transcript_perm$mean_stability, decreasing = TRUE),] 
+  
   rows_l <- length(c(NA, gene_CI$gCSI_CI,
                    c(transcript_CI$gCSI_CI),
                    gene_CI$CCLE_CI,
@@ -381,29 +402,73 @@ for (i in 1:length(genes)){
                                      gene_perm$CCLE_sig,
                                      transcript_perm$CCLE_sig,
                                      gene_perm$GDSC_sig,
-                                     transcript_perm$GDSC_sig)
+                                     transcript_perm$GDSC_sig),
     
+    c("Mean stability", NA, formatC(transcript_perm$mean_stability, format = "e", digits = 3),
+                                     NA,
+                            formatC(transcript_perm$mean_stability, format = "e", digits = 3),
+                                     NA,
+                        formatC(transcript_perm$mean_stability, format = "e", digits = 3))
   )
   
   
+  fn <- local({
+    i = 0
+    
+    b_clrs =  c(c("darkgreen",rep("red", nrow(transcript_CI))),c("darkgreen",rep("red", nrow(transcript_CI))), c("darkgreen",rep("red", nrow(transcript_CI))))
+    l_clrs =  c(c("darkgreen",rep("red", nrow(transcript_CI))),c("darkgreen",rep("red", nrow(transcript_CI))), c("darkgreen",rep("red", nrow(transcript_CI))))
+    function(..., clr.line, clr.marker){
+      i <<- i + 1
+      fpDrawNormalCI(..., clr.line = l_clrs[i], clr.marker = b_clrs[i])
+      #fpDrawSummaryCI(...,col=s_clrs[i])
+    }
+  })
+  
   fileName = paste0("figures/",gene,"_",drug,".pdf")
-  pdf(fileName, width=9 , height=12, onefile=FALSE)
+  pdf(fileName, width=12 , height=15, onefile=FALSE)
   
   forestplot(c_tabletext, c_indices, new_page = TRUE, boxsize = 0.3, is.summary=c(T,rep(F,rows_l)), xlab="Concordance Index", 
-             title=paste0(gene,"_",drug), zero=c(.49, .51),hrzl_lines=list("2"=gpar(lty=2, columns=1:5, col = "#000044")),
+             title=paste0(gene,"_",drug), zero=c(.49, .51),hrzl_lines=list("2"=gpar(lty=2, columns=1:6, col = "#000044")),
              txt_gp=fpTxtGp(label=gpar(fontfamily = "", cex = 0.8, fontface=2),
                             ticks=gpar(fontfamily = "", cex=.5, fontface=1),
                             xlab=gpar(fontfamily = "", cex=0.8, fontface=2),
                             legend=gpar(fontfamily = "", cex = 0.5, fontface=1)),
-             col=fpColors(box=RColorBrewer::brewer.pal(n=4, name="Set2"),
-                          line=RColorBrewer::brewer.pal(n=4, name="Set2"),
-                          summary="blue"), 
+             fn.ci_norm = fn,
+             col=fpColors(summary="blue"), 
              xticks= c(.3, .4, .5, .6, .7, .8)
   )
   
   dev.off()
   
 }
+
+
+
+
+
+
+
+fn <- local({
+  i = 0
+  
+  b_clrs =  c(c("darkgreen",rep("red", 8)),c("darkgreen",rep("red", 8)), c("darkgreen",rep("red", 8)))
+  l_clrs =  c(c("darkgreen",rep("red", 8)),c("darkgreen",rep("red", 8)), c("darkgreen",rep("red", 8)))
+  function(..., clr.line, clr.marker){
+    i <<- i + 1
+    fpDrawNormalCI(..., clr.line = l_clrs[i], clr.marker = b_clrs[i])
+    #fpDrawSummaryCI(...,col=s_clrs[i])
+  }
+})
+
+
+
+
+
+
+
+
+
+
 
 
 ################################
@@ -422,9 +487,6 @@ erbb2_isoforms_CI$gcsi_ccle_stab <- transcript_stability$gcsi_ccle_spearman[matc
 erbb2_isoforms_CI$gdsc_ccle_stab <- transcript_stability$gdsc_ccle_spearman[match(erbb2_isoforms_CI$gene, transcript_stability$transcript_id)]
 erbb2_isoforms_CI$gcsi_gdsc_stab <- transcript_stability$gcsi_gdsc_spearman[match(erbb2_isoforms_CI$gene, transcript_stability$transcript_id)]
 erbb2_isoforms_CI$mean_stability <- rowMeans(erbb2_isoforms_CI[,c(-1:-17)])
-
-
-
 
 
 phb_perm_inter$gcsi_ccle_stab <- transcript_stability$gcsi_ccle_spearman[match(phb_perm_inter$gene, transcript_stability$transcript_id)]
