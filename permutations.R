@@ -36,14 +36,14 @@ expand.grid.unique <- function(x, y, include.equals=FALSE)
 }
 
 #read in known biomarkers (curated by BHKLAB), and filter for expression biomarkers only with drugs that exist across gCSI,CCLE,GDSC
-#biomarkers selected are: 1) ERBB2 + Lapatinib; 2) ALK + Crizotinib; 3) PHB + Paclitaxel
+#biomarkers selected are: 1) ERBB2 + Lapatinib; 2) ALK + Crizotinib; 3) PHB + Paclitaxel; 4) ESR2 + Erlotinib; 5) EGFR & Lapatinib
 intersected_drugs <- Reduce(intersect, list(gCSI@sensitivity$info$drugid, CCLE@sensitivity$info$drugid, GDSC@sensitivity$info$drugid))
 biomarkers <- as.data.frame(readxl::read_xlsx("biomarkers.xlsx"))
 biomarkers <- biomarkers[grep("EXPR", biomarkers$Alteration.type),]
 biomarkers <- biomarkers[which(biomarkers$compound %in% intersected_drugs),]
-genes_keep <- c("ERBB2","ALK","PHB")
+genes_keep <- c("ERBB2","ALK","PHB","ESR2","EGFR")
 biomarkers <- biomarkers[which(biomarkers$gene %in% genes_keep),]
-biomarkers <- biomarkers[c(1,2,4),]
+biomarkers <- biomarkers[c(1,2,4,5,6),]
 
 ################################
 #Compute Concordance Index (CI)#
@@ -175,15 +175,29 @@ alk_isoforms <- transcript_stability$transcript_id[which(transcript_stability$tr
 alk_isoforms  <- as.data.frame(expand.grid.unique(alk_isoforms, "Crizotinib", include.equals = TRUE))
 colnames(alk_isoforms) <- c("gene","compound")
 
+egfr_isoforms <- gCSI@molecularProfiles$Kallisto_0.46.1.isoforms@elementMetadata$transcript_id[which(gCSI@molecularProfiles$Kallisto_0.46.1.isoforms@elementMetadata$gene_name == "EGFR")]
+egfr_isoforms <- transcript_stability$transcript_id[which(transcript_stability$transcript_id %in% egfr_isoforms)]
+egfr_isoforms  <- as.data.frame(expand.grid.unique(egfr_isoforms, "Lapatinib", include.equals = TRUE))
+colnames(egfr_isoforms) <- c("gene","compound")
+
+esr2_isoforms <- gCSI@molecularProfiles$Kallisto_0.46.1.isoforms@elementMetadata$transcript_id[which(gCSI@molecularProfiles$Kallisto_0.46.1.isoforms@elementMetadata$gene_name == "ESR2")]
+esr2_isoforms <- transcript_stability$transcript_id[which(transcript_stability$transcript_id %in% esr2_isoforms)]
+esr2_isoforms  <- as.data.frame(expand.grid.unique(esr2_isoforms, "Erlotinib", include.equals = TRUE))
+colnames(esr2_isoforms) <- c("gene","compound")
+
 #erbb2_CI <- computeCIBiomarker(biomarker_matrix = erbb2_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
 #phb_CI <- computeCIBiomarker(biomarker_matrix = phb_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
 #alk_CI <- computeCIBiomarker(biomarker_matrix = alk_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
+#egfr_CI <- computeCIBiomarker(biomarker_matrix = egfr_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
+#esr2_CI <- computeCIBiomarker(biomarker_matrix = esr2_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
 
 #erbb2_CI$gene_name <- "ERBB2"
 #phb_CI$gene_name <- "PHB"
 #alk_CI$gene_name <- "ALK"
+#egfr_CI$gene_name <- "EGFR"
+#esr2_CI$gene_name <- "ESR2"
 
-#isoform_CI <- rbind(erbb2_CI, phb_CI, alk_CI)
+#isoform_CI <- rbind(erbb2_CI, phb_CI, alk_CI, egfr_CI, esr2_CI)
 
 #save(isoform_CI, file="isoform_CI.RData")
 
@@ -291,12 +305,16 @@ gene_permut$GDSC_se <- (gene_permut$GDSC_upper - (gene_permut$GDSC_lower))/3.92
 #erbb2_permut <- computePerBiomarker(biomarker_matrix = erbb2_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
 #phb_permut <- computePerBiomarker(biomarker_matrix = phb_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
 #alk_permut <- computePerBiomarker(biomarker_matrix = alk_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
+#egfr_permut <- computePerBiomarker(biomarker_matrix = egfr_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
+#esr2_permut <- computePerBiomarker(biomarker_matrix = esr2_isoforms, mData = "Kallisto_0.46.1.isoforms.counts", cells = intersected_rnacells)
 
 #erbb2_permut$gene_name <- "ERBB2"
 #phb_permut$gene_name <- "PHB"
 #alk_permut$gene_name <- "ALK"
+#egfr_permut$gene_name <- "EGFR"
+#esr2_permut$gene_name <- "ESR2"
 
-#isoform_permut <- rbind(erbb2_permut, phb_permut, alk_permut)
+#isoform_permut <- rbind(erbb2_permut, phb_permut, alk_permut, egfr_permut, esr2_permut)
 #save(isoform_permut, file="isoform_permut.RData")
 
 load("isoform_permut.RData")
@@ -316,7 +334,7 @@ isoform_permut$GDSC_se <- (isoform_permut$GDSC_upper - (isoform_permut$GDSC_lowe
 isoform_permut$gcsi_ccle_stab <- transcript_stability$gcsi_ccle_spearman[match(isoform_permut$gene, transcript_stability$transcript_id)]
 isoform_permut$gdsc_ccle_stab <- transcript_stability$gdsc_ccle_spearman[match(isoform_permut$gene, transcript_stability$transcript_id)]
 isoform_permut$gcsi_gdsc_stab <- transcript_stability$gcsi_gdsc_spearman[match(isoform_permut$gene, transcript_stability$transcript_id)]
-isoform_permut$mean_stability <- rowMeans(isoform_permut[,c(-1:-18)])
+isoform_permut$mean_stability <- rowMeans(isoform_permut[,c(-1:-21)])
 
 
 isoform_CI$gcsi_ccle_stab <- transcript_stability$gcsi_ccle_spearman[match(isoform_CI$gene, transcript_stability$transcript_id)]
@@ -326,8 +344,8 @@ isoform_CI$mean_stability <- rowMeans(isoform_CI[,c(-1:-18)])
 
 
 #genes-drug associations to be included in forest plot
-genes <- c("PHB", "ALK","ERBB2")
-drugs <- c("Paclitaxel", "Crizotinib", "Lapatinib")
+genes <- c("PHB", "ALK","ERBB2","EGFR","ESR2")
+drugs <- c("Paclitaxel", "Crizotinib", "Lapatinib","Lapatinib","Erlotinib")
 
 for (i in 1:length(genes)){
   gene <- genes[i]
@@ -441,6 +459,7 @@ for (i in 1:length(genes)){
   
   c_tabletext <- cbind(
     c("Gene/Isoform", paste0(gene, " (Gene)"), c(transcript_CI$gene)),
+    c("N",rep(144,rows_l-1)),
     
     c("C-index", formatC(combined_ci$estimate, format = "e", digits = 2),
       formatC(plot_combined_meta$ci_estimate, format = "e", digits = 2)),
@@ -449,7 +468,7 @@ for (i in 1:length(genes)){
       formatC(plot_combined_meta$perm_estimate, format = "e", digits = 2)),
     
     
-    c("Mean stability", NA, formatC(transcript_perm$mean_stability, format = "e", digits = 3))
+    c("Mean stability", NA, formatC(transcript_perm$mean_stability, format = "e", digits = 2))
   )
   
   
@@ -476,13 +495,13 @@ for (i in 1:length(genes)){
   })
   
   fileName = paste0("figures/",gene,"_",drug,".pdf")
-  pdf(fileName, width=9 , height=10, onefile=FALSE)
+  pdf(fileName, width=9 , height=8, onefile=FALSE)
   
   forestplot(c_tabletext, c_indices, new_page = TRUE, boxsize = 0.3, is.summary=c(T), xlab="Concordance Index", 
-             title=paste0(gene,"_",drug), zero=c(.49, .51),hrzl_lines=list("2"=gpar(lty=2, columns=1:4, col = "#000044")),
+             title=paste0(gene,"_",drug), zero=c(.49, .51),hrzl_lines=list("2"=gpar(lty=2, columns=1:5, col = "#000044")),
              txt_gp=fpTxtGp(label=gpar(fontfamily = "", cex = 0.8, fontface=2),
                             ticks=gpar(fontfamily = "", cex=.5, fontface=1),
-                            xlab=gpar(fontfamily = "", cex=0.8, fontface=2),
+                            xlab=gpar(fontfamily = "", cex=0.8, fontface=2), 
                             legend=gpar(fontfamily = "", cex = 0.5, fontface=1)),
              fn.ci_sum = fn1,
              col = fpColors(text="black"),
@@ -492,9 +511,3 @@ for (i in 1:length(genes)){
   dev.off()
   
 }
-
-
-
-
-
-
