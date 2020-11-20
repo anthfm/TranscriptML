@@ -3,26 +3,26 @@
 options(stringsAsFactors = FALSE)
 #need to get first(5')/last(3') 100bp regions of transcript to calculate 5' and 3' bias
 
-gCSI <- readRDS("/Users/anthmam/Desktop/Projects/BHKLAB/PSets/gCSI.rds")
+gCSI <- readRDS("gCSI.rds")
 feat <- gCSI@molecularProfiles$Kallisto_0.46.1.isoforms@elementMetadata
 feat <- feat[,c("seqnames","start","end","strand","transcript_id")]
 
 #Isolate + strand transcripts (5' begins at "start")
 feat_pos <- as.data.frame(feat[which(feat$strand=="+"),])
 feat_pos$five.prime.start <- feat_pos$start
-feat_pos$five.prime.end <- feat_pos$start + 99
+feat_pos$five.prime.end <- feat_pos$start + as.integer(99)
 
-feat_pos$three.prime.start <- feat_pos$end - 99
+feat_pos$three.prime.start <- feat_pos$end - as.integer(99)
 feat_pos$three.prime.end <- feat_pos$end
 
 
 #Isolate - strand transcripts (5' begins at "end")
 feat_neg <- as.data.frame(feat[which(feat$strand=="-"),])
-feat_neg$five.prime.start <- feat_neg$end - 99
+feat_neg$five.prime.start <- feat_neg$end - as.integer(99)
 feat_neg$five.prime.end <- feat_neg$end
 
 feat_neg$three.prime.start <- feat_neg$start
-feat_neg$three.prime.end <- feat_neg$start + 99
+feat_neg$three.prime.end <- feat_neg$start + as.integer(99)
 
 
 combined_five_prime <- rbind(feat_pos[,c("seqnames","five.prime.start","five.prime.end","transcript_id")],
